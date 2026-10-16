@@ -310,7 +310,7 @@
       if(document.activeElement===el){
         try{ el.setSelectionRange(out.length,out.length); }catch(e){}
       }
-      if(el.id==='arrive1') recalc();
+      if(el.id==='arrive1'||el.id==='march1'||el.id==='march2') recalc();
     });
     el.addEventListener('blur', function(){
       const s=parseToSeconds(el.value);
@@ -361,31 +361,35 @@
   });
   document.getElementById('btnCalc').addEventListener('click', recalc);
 
-  function recalc(){
+  // Lê SEMPRE os campos ao vivo e devolve os tempos calculados (ou null se faltar dado)
+  function computeTargets(){
     const target1 = parseToSeconds(document.getElementById('arrive1').value);
     const marchTime1 = parseToSeconds(document.getElementById('march1').value);
     const marchTime2 = parseToSeconds(document.getElementById('march2').value);
     const gapSec = parseToSeconds(gapInput.value) || 0;
-
-    if(target1===null || marchTime1===null || marchTime2===null){
-      resultCard.style.display='none';
-      return;
-    }
-    resultCard.style.display='block';
-
+    if(target1===null || marchTime1===null || marchTime2===null) return null;
     const arriveVS1 = target1;
     const arriveVS2 = target1 - gapSec;
-    const sendVS1 = arriveVS1 + marchTime1;
-    const sendVS2 = arriveVS2 + marchTime2;
-
-    document.getElementById('arr1info').textContent='Chega no VS '+fmt(arriveVS1)+' · marcha '+fmtShort(marchTime1).replace('+','');
-    document.getElementById('arr2info').textContent='Chega no VS '+fmt(arriveVS2)+' · marcha '+fmtShort(marchTime2).replace('+','');
-    document.getElementById('send1').textContent='Enviar no VS '+fmt(sendVS1);
-    document.getElementById('send2').textContent='Enviar no VS '+fmt(sendVS2);
-
-    resultCard.dataset.sv1=sendVS1;
-    resultCard.dataset.sv2=sendVS2;
+    return {
+      marchTime1, marchTime2, arriveVS1, arriveVS2,
+      sendVS1: arriveVS1 + marchTime1,
+      sendVS2: arriveVS2 + marchTime2
+    };
   }
+
+  // Atualiza os textos do resultado a partir dos valores atuais. Retorna os tempos (ou null).
+  function refreshResult(){
+    const t = computeTargets();
+    if(!t){ resultCard.style.display='none'; return null; }
+    resultCard.style.display='block';
+    document.getElementById('arr1info').textContent='Chega no VS '+fmt(t.arriveVS1)+' · marcha '+fmtShort(t.marchTime1).replace('+','');
+    document.getElementById('arr2info').textContent='Chega no VS '+fmt(t.arriveVS2)+' · marcha '+fmtShort(t.marchTime2).replace('+','');
+    document.getElementById('send1').textContent='Enviar no VS '+fmt(t.sendVS1);
+    document.getElementById('send2').textContent='Enviar no VS '+fmt(t.sendVS2);
+    return t;
+  }
+
+  function recalc(){ refreshResult(); }
 
   function updateCountdown(id, sendVS){
     const cd=document.getElementById(id);
@@ -411,8 +415,11 @@
         vsState.textContent='Rodando…';
       }
       if(resultCard.style.display==='block'){
-        updateCountdown('cd1', parseFloat(resultCard.dataset.sv1));
-        updateCountdown('cd2', parseFloat(resultCard.dataset.sv2));
+        const t = refreshResult();
+        if(t){
+          updateCountdown('cd1', t.sendVS1);
+          updateCountdown('cd2', t.sendVS2);
+        }
       }
     }
     requestAnimationFrame(tick);

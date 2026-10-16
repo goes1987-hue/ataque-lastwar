@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0b1220">
+<title>Synced Attack - Last War</title>
+<style>
+  :root{
+    --bg:#0b1220;
+    --panel:#121c30;
+    --panel2:#172338;
+    --line:#26354f;
+    --txt:#e8eefb;
+    --muted:#8ba0c4;
+    --accent:#3da5ff;
+    --go:#19c37d;
+    --warn:#ffb020;
+    --danger:#ff4d4d;
+    --sq1:#3da5ff;
+    --sq2:#c678ff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    background:radial-gradient(1200px 600px at 50% -10%, #152339, var(--bg));
+    color:var(--txt);
+    min-height:100vh;
+    min-height:100dvh;
+    padding:14px 12px calc(20px + env(safe-area-inset-bottom));
+    -webkit-tap-highlight-color:transparent;
+  }
+  .wrap{max-width:560px;margin:0 auto}
+  h1{font-size:18px;text-align:center;margin-bottom:3px;letter-spacing:.2px}
+  .sub{text-align:center;color:var(--muted);font-size:12px;margin-bottom:14px;line-height:1.4}
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:14px;
+    margin-bottom:12px;
+    box-shadow:0 8px 30px rgba(0,0,0,.25);
+  }
+  .card h2{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:12px}
+
+  /* Relógio VS */
+  .vs-clock{
+    text-align:center;
+    font-variant-numeric:tabular-nums;
+    font-weight:800;
+    font-size:clamp(46px,16vw,72px);
+    line-height:1;
+    letter-spacing:1px;
+    padding:8px 0 4px;
+  }
+  .vs-clock.stopped{color:var(--muted)}
+  .vs-state{text-align:center;font-size:12px;color:var(--muted);margin-bottom:12px;min-height:16px}
+  .vs-clock.running{color:var(--accent);text-shadow:0 0 22px rgba(61,165,255,.35)}
+
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .field{flex:1;min-width:140px}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;line-height:1.3}
+  input[type=text]{
+    width:100%;
+    background:var(--panel2);
+    border:1px solid var(--line);
+    border-radius:12px;
+    color:var(--txt);
+    font-size:24px;
+    font-variant-numeric:tabular-nums;
+    padding:16px 14px;
+    text-align:center;
+    letter-spacing:2px;
+    outline:none;
+    transition:border-color .15s, background .15s;
+    -webkit-user-select:text;
+    user-select:text;
+    touch-action:manipulation;
+    cursor:text;
+    caret-color:var(--accent);
+  }
+  input[type=text]::placeholder{color:#44567a}
+  input[type=text]:focus{border-color:var(--accent);background:#1b2a44}
+  .hint{font-size:11px;color:var(--muted);margin-top:6px;text-align:center;line-height:1.4}
+
+  .btns{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+  button{
+    flex:1;
+    min-width:120px;
+    min-height:52px;
+    border:none;
+    border-radius:12px;
+    padding:14px 12px;
+    font-size:16px;
+    font-weight:700;
+    cursor:pointer;
+    color:#07121f;
+    transition:transform .05s, filter .15s;
+    touch-action:manipulation;
+  }
+  button:active{transform:translateY(1px)}
+  .btn-start{background:var(--go)}
+  .btn-stop{background:var(--danger);color:#fff}
+  .btn-ghost{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}
+
+  /* Esquadrões */
+  .sq-grid{display:flex;gap:10px;flex-wrap:wrap}
+  .sq-box{flex:1;min-width:140px}
+  .tag{display:inline-block;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;margin-bottom:8px}
+  .tag.s1{background:rgba(61,165,255,.15);color:var(--sq1)}
+  .tag.s2{background:rgba(198,120,255,.15);color:var(--sq2)}
+
+  /* Alvo */
+  .target-line{margin-bottom:12px}
+  .target-line label{margin-bottom:6px}
+
+  /* Resultado */
+  .result-card{display:none}
+  .send{
+    border-radius:12px;padding:14px;margin-top:10px;
+    border:1px solid var(--line);
+    display:flex;justify-content:space-between;align-items:center;gap:12px;
+  }
+  .send.s1{border-left:4px solid var(--sq1)}
+  .send.s2{border-left:4px solid var(--sq2)}
+  .send .who{font-size:12px;color:var(--muted);margin-top:2px}
+  .send .arr{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.4}
+  .send .countdown{
+    font-variant-numeric:tabular-nums;font-weight:800;font-size:clamp(26px,9vw,34px);line-height:1;
+    text-align:right;min-width:112px;
+  }
+  .send .sendat{font-size:12px;color:var(--muted);text-align:right;margin-top:4px}
+  .countdown.go{color:var(--go);animation:flash .5s steps(2) infinite}
+  .countdown.soon{color:var(--warn)}
+  .countdown.wait{color:var(--txt)}
+  .countdown.passed{color:var(--muted)}
+  @keyframes flash{50%{opacity:.35}}
+
+  .note{font-size:11.5px;color:var(--muted);line-height:1.5;margin-top:12px}
+  .foot{text-align:center;color:var(--muted);font-size:11px;margin-top:16px;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>⚔️ Synced Attack — Last War</h1>
+  <div class="sub">VS timer + the exact time to send each squad</div>
+
+  <!-- CRONÔMETRO VS -->
+  <div class="card">
+    <h2>1 · VS Timer</h2>
+    <div id="vsClock" class="vs-clock stopped">00:00:00</div>
+    <div id="vsState" class="vs-state">Stopped — enter the VS time and start</div>
+
+    <div class="row">
+      <div class="field">
+        <label>Current VS time</label>
+        <input id="vsInput" type="text" inputmode="numeric" placeholder="00:00:00" autocomplete="off">
+        <div class="hint">Just type the digits: <b>141457</b> becomes <b>14:14:57</b></div>
+      </div>
+    </div>
+
+    <div class="btns">
+      <button class="btn-start" id="btnStart">▶ Start</button>
+      <button class="btn-stop" id="btnStop">■ Stop / Reset</button>
+    </div>
+  </div>
+
+  <!-- MARCHAS -->
+  <div class="card">
+    <h2>2 · Squad march time</h2>
+    <div class="sq-grid">
+      <div class="sq-box">
+        <span class="tag s1">Squad 1</span>
+        <label>March time</label>
+        <input id="march1" type="text" inputmode="numeric" placeholder="00:31" autocomplete="off">
+      </div>
+      <div class="sq-box">
+        <span class="tag s2">Squad 2</span>
+        <label>March time</label>
+        <input id="march2" type="text" inputmode="numeric" placeholder="00:33" autocomplete="off">
+      </div>
+    </div>
+    <div class="hint" style="margin-top:8px">E.g.: <b>31</b> becomes <b>00:31</b></div>
+  </div>
+
+  <!-- ALVO -->
+  <div class="card">
+    <h2>3 · When they should arrive</h2>
+    <div class="target-line">
+      <label>Squad 1 must ARRIVE when the VS reads:</label>
+      <input id="arrive1" type="text" inputmode="numeric" placeholder="14:07:50" autocomplete="off">
+    </div>
+    <div class="target-line" style="margin-bottom:0">
+      <label>Squad 2 gap (seconds after Squad 1)</label>
+      <input id="gap" type="text" inputmode="numeric" placeholder="7" value="7" autocomplete="off" style="font-size:22px">
+    </div>
+    <div class="hint" style="margin-top:8px">Squad 2 arrives <b id="gapEcho">7</b>s after Squad 1.</div>
+
+    <div class="btns">
+      <button class="btn-ghost" id="btnCalc">🎯 Calculate send time</button>
+    </div>
+  </div>
+
+  <!-- RESULTADO -->
+  <div class="card result-card" id="resultCard">
+    <h2>4 · Time to tap "March"</h2>
+    <div class="send s1">
+      <div>
+        <div style="font-weight:700;color:var(--sq1)">Squad 1</div>
+        <div class="who">Send when VS reads</div>
+        <div class="arr" id="arr1info"></div>
+      </div>
+      <div>
+        <div class="countdown wait" id="cd1">--</div>
+        <div class="sendat" id="send1"></div>
+      </div>
+    </div>
+    <div class="send s2">
+      <div>
+        <div style="font-weight:700;color:var(--sq2)">Squad 2</div>
+        <div class="who">Send when VS reads</div>
+        <div class="arr" id="arr2info"></div>
+      </div>
+      <div>
+        <div class="countdown wait" id="cd2">--</div>
+        <div class="sendat" id="send2"></div>
+      </div>
+    </div>
+    <div class="note">
+      The big numbers show <b>how long until you tap "March"</b> for each squad.
+      When it shows <b>SEND</b> (flashing green), tap at that moment.
+    </div>
+  </div>
+
+  <div class="foot">
+    Works offline. The VS keeps running even if you switch tabs — it only stops if you close/reload the page.<br>
+    Tip: on mobile, use "Add to Home screen" to open it like an app.
+  </div>
+</div>
+
+<script>
+(function(){
+  // ---- Estado do cronômetro VS ----
+  let vsStartSeconds = null;
+  let vsStartStamp = null;
+  let running = false;
+
+  const vsClock = document.getElementById('vsClock');
+  const vsState = document.getElementById('vsState');
+  const vsInput = document.getElementById('vsInput');
+
+  // Converte texto em segundos.
+  function parseToSeconds(str){
+    if(str==null) return null;
+    str = String(str).trim();
+    if(str==='') return null;
+    let h=0,m=0,s=0;
+    if(str.indexOf(':')>-1){
+      const p = str.split(':').map(x=>parseInt(x,10)||0);
+      if(p.length===3){ [h,m,s]=p; }
+      else if(p.length===2){ [m,s]=p; }
+      else { s=p[0]; }
+    } else {
+      const d = str.replace(/\D/g,'');
+      if(d==='') return null;
+      if(d.length<=2){ s=parseInt(d,10); }
+      else if(d.length<=4){ m=parseInt(d.slice(0,-2),10); s=parseInt(d.slice(-2),10); }
+      else { h=parseInt(d.slice(0,-4),10); m=parseInt(d.slice(-4,-2),10); s=parseInt(d.slice(-2),10); }
+    }
+    return h*3600+m*60+s;
+  }
+
+  function fmt(sec){
+    sec = Math.max(0, Math.round(sec));
+    const h=Math.floor(sec/3600);
+    const m=Math.floor((sec%3600)/60);
+    const s=sec%60;
+    const pad=n=>String(n).padStart(2,'0');
+    return pad(h)+':'+pad(m)+':'+pad(s);
+  }
+  function fmtShort(sec){
+    const neg = sec<0;
+    sec=Math.abs(Math.round(sec));
+    const m=Math.floor(sec/60), s=sec%60;
+    const pad=n=>String(n).padStart(2,'0');
+    return (neg?'+':'')+pad(m)+':'+pad(s);
+  }
+
+  // ---- Máscara automática com ":" enquanto digita ----
+  // mode "hms" -> hh:mm:ss  |  mode "ms" -> mm:ss
+  function maskLive(el, mode){
+    el.addEventListener('input', function(){
+      let d = el.value.replace(/\D/g,'');
+      const max = mode==='hms' ? 6 : 4;
+      if(d.length>max) d = d.slice(0,max);
+      let out='';
+      if(mode==='hms'){
+        // agrupa da direita: ss, mm, hh
+        if(d.length<=2){ out=d; }
+        else if(d.length<=4){ out=d.slice(0,d.length-2)+':'+d.slice(-2); }
+        else { out=d.slice(0,d.length-4)+':'+d.slice(-4,-2)+':'+d.slice(-2); }
+      } else {
+        if(d.length<=2){ out=d; }
+        else { out=d.slice(0,d.length-2)+':'+d.slice(-2); }
+      }
+      if(el.value!==out){ el.value=out; }
+      // reposiciona cursor no fim, só se o campo estiver focado (evita travar o teclado no mobile)
+      if(document.activeElement===el){
+        try{ el.setSelectionRange(out.length,out.length); }catch(e){}
+      }
+      if(el.id==='arrive1') recalc();
+    });
+    el.addEventListener('blur', function(){
+      const s=parseToSeconds(el.value);
+      if(s!==null) el.value = mode==='hms' ? fmt(s) : fmtShort(s).replace('+','');
+    });
+  }
+  maskLive(vsInput,'hms');
+  maskLive(document.getElementById('arrive1'),'hms');
+  maskLive(document.getElementById('march1'),'ms');
+  maskLive(document.getElementById('march2'),'ms');
+
+  function currentVS(){
+    if(!running) return vsStartSeconds;
+    const elapsed = (Date.now()-vsStartStamp)/1000;
+    return vsStartSeconds - elapsed;
+  }
+
+  document.getElementById('btnStart').addEventListener('click', function(){
+    const secs = parseToSeconds(vsInput.value);
+    if(secs===null || secs<=0){
+      vsState.textContent='⚠ Enter a valid VS time, e.g. 14:14:57';
+      return;
+    }
+    vsStartSeconds = secs;
+    vsStartStamp = Date.now();
+    running = true;
+    vsClock.classList.remove('stopped');
+    vsClock.classList.add('running');
+    vsInput.blur();
+    recalc();
+  });
+
+  document.getElementById('btnStop').addEventListener('click', function(){
+    running=false;
+    vsStartSeconds=null;
+    vsClock.textContent='00:00:00';
+    vsClock.classList.remove('running');
+    vsClock.classList.add('stopped');
+    vsState.textContent='Stopped — enter the VS time and start';
+  });
+
+  // ---- Cálculo de envio ----
+  const resultCard=document.getElementById('resultCard');
+  const gapInput=document.getElementById('gap');
+  gapInput.addEventListener('input',()=>{
+    document.getElementById('gapEcho').textContent=(parseToSeconds(gapInput.value)||0);
+    recalc();
+  });
+  document.getElementById('btnCalc').addEventListener('click', recalc);
+
+  function recalc(){
+    const target1 = parseToSeconds(document.getElementById('arrive1').value);
+    const marchTime1 = parseToSeconds(document.getElementById('march1').value);
+    const marchTime2 = parseToSeconds(document.getElementById('march2').value);
+    const gapSec = parseToSeconds(gapInput.value) || 0;
+
+    if(target1===null || marchTime1===null || marchTime2===null){
+      resultCard.style.display='none';
+      return;
+    }
+    resultCard.style.display='block';
+
+    const arriveVS1 = target1;
+    const arriveVS2 = target1 - gapSec;
+    const sendVS1 = arriveVS1 + marchTime1;
+    const sendVS2 = arriveVS2 + marchTime2;
+
+    document.getElementById('arr1info').textContent='Arrives at VS '+fmt(arriveVS1)+' · march '+fmtShort(marchTime1).replace('+','');
+    document.getElementById('arr2info').textContent='Arrives at VS '+fmt(arriveVS2)+' · march '+fmtShort(marchTime2).replace('+','');
+    document.getElementById('send1').textContent='Send at VS '+fmt(sendVS1);
+    document.getElementById('send2').textContent='Send at VS '+fmt(sendVS2);
+
+    resultCard.dataset.sv1=sendVS1;
+    resultCard.dataset.sv2=sendVS2;
+  }
+
+  function updateCountdown(id, sendVS){
+    const cd=document.getElementById(id);
+    if(!running || sendVS===undefined || isNaN(sendVS)){ cd.textContent='--'; cd.className='countdown wait'; return; }
+    const now=currentVS();
+    const remain = now - sendVS;
+    cd.textContent = fmtShort(remain);
+    cd.className='countdown';
+    if(remain<=0.5 && remain>-3){ cd.classList.add('go'); cd.textContent='SEND'; }
+    else if(remain<=5){ cd.classList.add('soon'); }
+    else if(remain<0){ cd.classList.add('passed'); }
+    else { cd.classList.add('wait'); }
+  }
+
+  function tick(){
+    if(running){
+      const v=currentVS();
+      if(v<=0){
+        vsClock.textContent='00:00:00';
+        vsState.textContent='⏱ VS reached zero';
+      } else {
+        vsClock.textContent=fmt(v);
+        vsState.textContent='Running…';
+      }
+      if(resultCard.style.display==='block'){
+        updateCountdown('cd1', parseFloat(resultCard.dataset.sv1));
+        updateCountdown('cd2', parseFloat(resultCard.dataset.sv2));
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+  tick();
+})();
+</script>
+</body>
+</html>
